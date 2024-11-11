@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions, Modal, TextInput, Button } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Modal, TextInput, Button } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, startOfMonth, eachDayOfInterval, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-const CalendarScreen: React.FC = () => {
+import styles from './styles';
+import { holidays } from './holidays';
+
+const Index: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [notes, setNotes] = useState<{ [key: string]: string }>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -85,19 +89,26 @@ const CalendarScreen: React.FC = () => {
 
   const renderItem = ({ item: date }: { item: Date | null }) => {
     if (!date) {
-      return <View style={styles.dayBox} />;
+      return <View style={styles.emptyDayBox} />;
     }
 
     const formattedDate = format(date, 'dd-MM-yyyy');
     const day = format(date, 'd');
     const isNoteDay = notes[formattedDate] !== undefined;
 
+    const holiday = holidays.find((holiday) => holiday.date === formattedDate);
+    const isHoliday = !!holiday;
+
     return (
       <TouchableOpacity
         style={[styles.dayBox, isNoteDay && styles.noteDay]}
         onPress={() => handleDayPress(date)}
       >
-        <Text style={styles.dayText}>{day}</Text>
+        <View style={[styles.dayCircle, isHoliday && styles.holidayCircle]}>
+          <Text style={styles.dayText}>{day}</Text>
+        </View>
+        
+        {isHoliday && <Text style={styles.holidayText}>{holiday.name}</Text>}
         {isNoteDay && <Text style={styles.noteIndicator}>*</Text>}
       </TouchableOpacity>
     );
@@ -113,19 +124,17 @@ const CalendarScreen: React.FC = () => {
         <TouchableOpacity style={styles.navButtonContainer} onPress={handlePreviousMonth}>
           <Text style={styles.navButton}>{'<'}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{format(currentMonth, 'MMMM yyyy')}</Text>
+        <Text style={styles.title}>{format(currentMonth, 'MMMM yyyy', { locale: ptBR })}</Text>
         <TouchableOpacity style={styles.navButtonContainer} onPress={handleNextMonth}>
           <Text style={styles.navButton}>{'>'}</Text>
         </TouchableOpacity>
       </View>
-
 
       <View style={styles.weekDaysRow}>
         {daysOfWeek.map((day) => (
           <Text key={day} style={styles.weekDayText}>{day}</Text>
         ))}
       </View>
-
 
       <FlatList
         data={days}
@@ -135,7 +144,6 @@ const CalendarScreen: React.FC = () => {
         contentContainerStyle={styles.calendarContainer}
       />
 
-
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -144,11 +152,11 @@ const CalendarScreen: React.FC = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>não se esqueça!</Text>
+            <Text style={styles.modalTitle}>Não se esqueça!</Text>
             <TextInput
               style={styles.input}
               multiline
-              placeholder="deixe suas notas aqui!"
+              placeholder="Deixe suas notas aqui!"
               value={noteText}
               onChangeText={setNoteText}
             />
@@ -164,122 +172,4 @@ const CalendarScreen: React.FC = () => {
   );
 };
 
-export default CalendarScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F0F0F0',
-    paddingTop: 20,
-
-  },
-  appNameContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    fontWeight:'bold',
-    backgroundColor:'#87cefa'
-  },
-  appName: {
-    fontSize: 35,
-    fontWeight: 'bold',
-    color: '#FFF',
-  },
-  header: {
-    height: '8%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    
-  },
-  title: {
-    color: '#000',
-    fontSize: 20,
-    fontWeight: 'bold',
-    paddingTop: 5,
-  },
-  navButtonContainer: {
-    padding: 10,
-  },
-  navButton: {
-    color: '#000',
-    fontSize: 30,
-    fontWeight: 'bold',
-  },
-  weekDaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#DDD',
-    paddingVertical: 10,
-  },
-  weekDayText: {
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
-    width: Dimensions.get('window').width / 7,
-  },
-  calendarContainer: {
-    flexGrow: 1,
-    justifyContent: 'flex-start',
-    marginBottom: 20,
-  },
-  dayBox: {
-    width: Dimensions.get('window').width / 6,
-    height: (Dimensions.get('window').height - 350) / 5,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  dayText: {
-    fontSize: 24,
-    color: '#333',
-    textAlign: 'center',
-  },
-  noteDay: {
-    backgroundColor: '#F4988d'
-  },
-  noteIndicator: {
-    fontSize: 32,
-    color: '#000',
-    position: 'absolute',
-    bottom: 1,  
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '100%',
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    padding: 20,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    
-  },
-  input: {
-    width: '100%',
-    height: 150,
-    borderColor: '#CCC',
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    textAlignVertical: 'top',
-    marginBottom: 10,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 10,
-  },
-});
+export default Index;
